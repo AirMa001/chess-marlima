@@ -1,7 +1,8 @@
 const express = require('express');
+const cors = require('cors'); // ...new import...
 const connectDB = require('./config/db');
 const responseHelper = require('./utils/responseHelper.js');
-const router = require('./routes/playersRoute.js'); // ensure './routes' exports a middleware (function)
+const router = require('./routes/playersRoute.js');
 const routeGuard = require('./middle_ware/routeGuard');
 
 const app = express();
@@ -11,11 +12,10 @@ connectDB();
 
 // Middleware
 app.use(express.json());
+app.use(cors()); // Allow calls from everywhere
 
 // Routes
 app.use('/api', router);
-
-// New endpoint to return the API key
 app.get('/apikey', (req, res) => {
   res.json({ apiKey: routeGuard.getApiKey() });
 });
