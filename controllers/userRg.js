@@ -37,7 +37,7 @@ const Players = {
       return responseHelper.success(res, newPlayer, 201);
     } catch (error) {
       console.error('Error creating player:', error);
-      return responseHelper.error(res, 'Internal Server Error', 500);
+      return responseHelper.error(res, error, error.status);
     }
   },
   async getPlayers(req, res) {
