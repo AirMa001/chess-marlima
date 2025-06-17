@@ -1,0 +1,18 @@
+const mongoose = require('mongoose')
+require('dotenv').config(); // Load environment variables from .env file
+
+const connectDB = async () => {
+    try {
+        await mongoose.connect('mongodb+srv://incrediblemayo:B5qSRPCE5tqqtzTh@cluster0.bnmecyc.mongodb.net/Node-API?retryWrites=true&w=majority&appName=Cluster0', {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        });
+        console.log('MongoDB connected successfully');
+    } catch (error) {
+        console.error('MongoDB connection failed:', error);
+        process.exit(1); // Exit the process with failure
+    }
+}
+
+module.exports = connectDB;
+

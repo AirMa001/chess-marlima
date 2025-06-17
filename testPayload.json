@@ -1,0 +1,8 @@
+{
+  "fullName": "John Doe",
+  "email": "johndoe@example.com",
+  "lichessUsername": "johndoechess",
+  "rating": 1200,
+  "Department": "Sports",
+  "level": "Intermediate"
+}
