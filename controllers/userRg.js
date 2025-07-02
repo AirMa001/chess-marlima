@@ -26,13 +26,11 @@ const Players = {
 
       await newPlayer.save();
 
-      // Send confirmation email
-      const emailData = {
+      // Send confirmation email with signup template
+      await emailService.sendEmail({
         email: newPlayer.email,
-        subject: 'Registration Successful',
-        html: `<p>Dear ${newPlayer.fullName},</p><p>Your registration was successful!</p>`
-      };
-      await emailService.sendEmail(emailData);
+        userName: newPlayer.fullName
+      });
 
       return responseHelper.success(res, newPlayer, 201);
     } catch (error) {
