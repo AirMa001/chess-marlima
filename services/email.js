@@ -57,7 +57,7 @@ const generateSignupTemplate = (userName) => `<!DOCTYPE html>
     <p>Hi <span class="highlight">${userName}</span>,</p>
     <p>Congratulations on signing up for our chess competition! We’re thrilled to have you join us.</p>
     <p>Get ready to challenge your mind and connect with fellow chess enthusiasts.</p>
-    <a href="https://yourapp.com/competitions" class="button">View Competitions</a>
+    <a href="https://chessatmarlima.online/participants" class="button">View Competitions</a>
     <div class="footer">
       Powered by Chessatmarlima · Unleash Your Inner Grandmaster ♛
     </div>
