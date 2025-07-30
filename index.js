@@ -5,6 +5,7 @@ const responseHelper = require('./utils/responseHelper.js');
 const playerRoutes = require('./routes/playersRoute.js');
 const routeGuard = require('./middle_ware/routeGuard');
 const dotenv = require('dotenv');
+// paystackService.pollPendingTransactions(); // Start polling for pending transactions
 dotenv.config(); // Load environment variables from .env file
 const app = express();
 

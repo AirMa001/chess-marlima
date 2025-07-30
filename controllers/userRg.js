@@ -1,3 +1,4 @@
+
 const Player = require('../models/players');
 const responseHelper = require('../utils/responseHelper');
 const emailService = require('../services/email');
@@ -5,6 +6,22 @@ const lichessService = require("../services/lichessService")
 const Transaction = require('../models/transaction')
 
 const Players = {
+  async getTransactionStatus(req, res) {
+    try {
+      const { reference } = req.query;
+      if (!reference) {
+        return res.status(400).json({ status: 'error', message: 'Reference is required' });
+      }
+      const transaction = await Transaction.findOne({ reference });
+      if (!transaction) {
+        return res.status(404).json({ status: 'error', message: 'Transaction not found' });
+      }
+      return res.status(200).json({ status: transaction.status });
+    } catch (error) {
+      console.error('Error fetching transaction status:', error);
+      return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+  },
   async createPlayer(req, res) {
     try {
       const { fullName, email, lichessUsername, Department, phoneNumber } = req.body;
@@ -171,10 +188,12 @@ const Players = {
         // Find transaction by reference
         const transaction = await Transaction.findOne({ reference }).populate('player');
         if (transaction) {
-          transaction.status = 'success';
-          await transaction.save();
-          // Mark player as verified
-          if (transaction.player) {
+          if (transaction.status !== 'success') {
+            transaction.status = 'success';
+            await transaction.save();
+          }
+          // Mark player as verified if not already
+          if (transaction.player && !transaction.player.verified) {
             transaction.player.verified = true;
             await transaction.player.save();
           }
@@ -186,7 +205,8 @@ const Players = {
       console.error('Error handling Paystack webhook:', error);
       res.status(500).send('Webhook error');
     }
-  }
+  },
+  
 };
 
 module.exports = Players;
