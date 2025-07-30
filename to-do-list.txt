@@ -1,0 +1,4 @@
+1. Adding Liches api done
+2. Payment feature paystack/flutterwave/opay
+3. Add pphone number to form done
+4. Clear the db done

@@ -2,20 +2,21 @@ const express = require('express');
 const cors = require('cors'); // ...new import...
 const connectDB = require('./config/db');
 const responseHelper = require('./utils/responseHelper.js');
-const router = require('./routes/playersRoute.js');
+const playerRoutes = require('./routes/playersRoute.js');
 const routeGuard = require('./middle_ware/routeGuard');
-
+const dotenv = require('dotenv');
+dotenv.config(); // Load environment variables from .env file
 const app = express();
 
 // Connect to MongoDB
-connectDB();
+connectDB()
 
 // Middleware
 app.use(express.json());
 app.use(cors()); // Allow calls from everywhere
 
 // Routes
-app.use('/api', router);
+app.use('/api', playerRoutes);
 app.get('/apikey', (req, res) => {
   res.json({ apiKey: routeGuard.getApiKey() });
 });

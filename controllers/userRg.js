@@ -1,18 +1,27 @@
 const Player = require('../models/players');
 const responseHelper = require('../utils/responseHelper');
 const emailService = require('../services/email');
-
+const lichessService = require("../services/lichessService")
+const Transaction = require('../models/transaction')
 
 const Players = {
   async createPlayer(req, res) {
     try {
-      const { fullName, email, lichessUsername, rating, Department, level } = req.body;
+      const { fullName, email, lichessUsername, Department, phoneNumber } = req.body;
 
       // Check if the player already exists
       const existingPlayer = await Player.findOne({ email });
+
       if (existingPlayer) {
         return responseHelper.error(res, 'Player with this email already exists', 400);
       }
+
+     
+      const rating = await lichessService.getLichessRating(lichessUsername);
+      if (rating === undefined) {
+        return responseHelper.error(res, 'Invalid Lichess username or unable to fetch rating', 400);
+      }
+      
 
       // Create a new player
       const newPlayer = new Player({
@@ -21,7 +30,7 @@ const Players = {
         lichessUsername,
         rating,
         Department,
-        level
+        phoneNumber,
       });
 
       await newPlayer.save();
@@ -32,7 +41,23 @@ const Players = {
         userName: newPlayer.fullName
       });
 
-      return responseHelper.success(res, newPlayer, 201);
+      // Initialize payment with Paystack (channels: transfer/bank, card)
+      const paystackChannels = ['bank', 'card', 'bank_transfer'];
+      const amount = 100000; // Set your registration fee here
+      const paymentData = await require('../services/paystackService').initializePayment(
+        newPlayer.lichessUsername,
+        newPlayer.email,
+        amount,
+        paystackChannels
+      );
+
+      // Redirect user to payment page
+      return res.status(201).json({
+        status: 'success',
+        message: 'Registration successful. Please complete your payment.',
+        data: newPlayer,
+        paymentUrl: paymentData.authorization_url
+      });
     } catch (error) {
       console.error('Error creating player:', error);
       return responseHelper.error(res, error, error.status);
@@ -91,6 +116,75 @@ const Players = {
     } catch (error) {
       console.error('Error deleting player:', error);
       return responseHelper.error(res, 'Internal Server Error', 500);
+    }
+  },
+  async initializePayment(req, res) {
+    try {
+      const { lichessUsername } = req.body;
+      if (!lichessUsername) {
+        return responseHelper.error(res, 'Lichess username is required', 400);
+      }
+      const player = await Player.findOne({ lichessUsername });
+      if (!player) {
+        return responseHelper.error(res, 'Player not found', 404);
+      }
+      const paystackChannels = ['bank', 'card', 'bank_transfer'];
+      const amount = 1000;
+      const paymentData = await require('../services/paystackService').initializePayment(
+        player.lichessUsername,
+        player.email,
+        amount,
+        paystackChannels
+      );
+      return res.status(200).json({
+        status: 'success',
+        message: 'Payment initialized successfully.',
+        paymentUrl: paymentData.authorization_url
+      });
+    } catch (error) {
+      console.error('Error initializing payment:', error);
+      return responseHelper.error(res, error, error.status);
+    }
+  },
+ 
+  async getAllTransactions(req, res) {
+    try {
+      const allTxs = await Transaction.find({}).populate('player');
+      return res.status(200).json({
+        status: 'success',
+        data: allTxs
+      });
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+  },
+  async paystackWebhook(req, res) {
+    try {
+      // Paystack sends event data in req.body
+      const event = req.body;
+      if (!event || !event.event) return res.status(400).send('Invalid webhook');
+
+      // Only handle successful charge events
+      if (event.event === 'charge.success') {
+        const reference = event.data.reference;
+        // Find transaction by reference
+        const transaction = await Transaction.findOne({ reference }).populate('player');
+        if (transaction) {
+          transaction.status = 'success';
+          await transaction.save();
+          // Mark player as verified
+          if (transaction.player) {
+            transaction.player.verified = true;
+            await transaction.player.save();
+          }
+        }
+      }
+      // You can handle other events (e.g., failed) similarly
+      res.status(200).send('Webhook received');
+    } catch (error) {
+      console.error('Error handling Paystack webhook:', error);
+      res.status(500).send('Webhook error');
     }
   }
 };

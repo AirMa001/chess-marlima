@@ -23,14 +23,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  level: {
-    type: String,
-    required: true
-  },
   verified: {
     type: Boolean,
     default: false
   },
+  phoneNumber: {
+    type: String,
+    required: true
+  }
 }, {timestamps: true});
 
 module.exports = mongoose.model('Player', userSchema);
