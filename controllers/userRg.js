@@ -80,12 +80,34 @@ const Players = {
       // Initialize payment with Paystack (channels: transfer/bank, card)
       const paystackChannels = ['bank', 'card', 'bank_transfer'];
       const amount = 100000; // Set your registration fee here
-      const paymentData = await require('../services/paystackService').initializePayment(
+      const paystackService = require('../services/paystackService');
+      const paymentData = await paystackService.initializePayment(
         newPlayer.lichessUsername,
         newPlayer.email,
         amount,
         paystackChannels
       );
+
+      // Immediately verify transaction status and update DB
+      async function verifyAndUpdateTransaction(reference) {
+        const paymentStatus = await paystackService.verifyPayment(reference);
+        if (!paymentStatus || !paymentStatus.status) return false;
+        const transaction = await Transaction.findOne({ reference });
+        if (transaction) {
+          transaction.status = paymentStatus.status;
+          await transaction.save();
+          if (paymentStatus.status === 'success') {
+            const player = await Player.findById(transaction.player);
+            if (player && !player.verified) {
+              player.verified = true;
+              await player.save();
+            }
+          }
+          return true;
+        }
+        return false;
+      }
+      await verifyAndUpdateTransaction(paymentData.reference);
 
       // Redirect user to payment page
       return res.status(201).json({
@@ -199,26 +221,46 @@ const Players = {
     try {
       // Paystack sends event data in req.body
       const event = req.body;
-      if (!event || !event.event) return res.status(400).send('Invalid webhook');
-
-      // Only handle successful charge events
-      if (event.event === 'charge.success') {
-        const reference = event.data.reference;
-        // Find transaction by reference
-        const transaction = await Transaction.findOne({ reference }).populate('player');
-        if (transaction) {
-          if (transaction.status !== 'success') {
-            transaction.status = 'success';
-            await transaction.save();
-          }
-          // Mark player as verified if not already
-          if (transaction.player && !transaction.player.verified) {
-            transaction.player.verified = true;
-            await transaction.player.save();
-          }
-        }
+      if (!event || !event.event) {
+        console.error('[Paystack Webhook] Invalid webhook payload:', event);
+        return res.status(400).send('Invalid webhook');
       }
-      // You can handle other events (e.g., failed) similarly
+
+      const reference = event?.data?.reference;
+      const status = event?.data?.status;
+      console.log(`[Paystack Webhook] Event: ${event.event}, Reference: ${reference}, Status: ${status}`);
+
+      // Find transaction by reference
+      const transaction = await Transaction.findOne({ reference }).populate('player');
+      if (!transaction) {
+        console.error(`[Paystack Webhook] Transaction not found for reference: ${reference}`);
+        return res.status(404).send('Transaction not found');
+      }
+
+      // Update transaction status based on event
+      if (event.event === 'charge.success') {
+        if (transaction.status !== 'success') {
+          transaction.status = 'success';
+          await transaction.save();
+          console.log(`[Paystack Webhook] Transaction ${reference} marked as success.`);
+        }
+        // Mark player as verified if not already
+        if (transaction.player && !transaction.player.verified) {
+          transaction.player.verified = true;
+          await transaction.player.save();
+          console.log(`[Paystack Webhook] Player ${transaction.player.email} marked as verified.`);
+        }
+      } else if (event.event === 'charge.failed' || status === 'failed') {
+        if (transaction.status !== 'failed') {
+          transaction.status = 'failed';
+          await transaction.save();
+          console.log(`[Paystack Webhook] Transaction ${reference} marked as failed.`);
+        }
+      } else {
+        // For other events, just log and do not update status
+        console.log(`[Paystack Webhook] Event ${event.event} received, no status update.`);
+      }
+
       res.status(200).send('Webhook received');
     } catch (error) {
       console.error('Error handling Paystack webhook:', error);
