@@ -79,9 +79,14 @@ async function pollPendingTransactions() {
             console.log(`[Paystack Polling] Player ${player.email} marked as verified.`);
           }
         } else if (paymentData.status === 'failed') {
-          tx.status = 'failed';
-          await tx.save();
-          console.log(`[Paystack Polling] Transaction ${tx.reference} marked as failed.`);
+          if (tx.status !== 'failed') {
+            tx.status = 'failed';
+            await tx.save();
+            console.log(`[Paystack Polling] Transaction ${tx.reference} marked as failed.`);
+          }
+        } else {
+          // If status is still pending or any other, do nothing and keep monitoring
+          console.log(`[Paystack Polling] Transaction ${tx.reference} is still pending. Will continue monitoring.`);
         }
       } catch (err) {
         console.error(`[Paystack Polling] Error verifying transaction ${tx.reference}:`, err);
