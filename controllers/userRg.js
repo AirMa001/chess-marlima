@@ -79,7 +79,7 @@ const Players = {
 
       // Initialize payment with Paystack (channels: transfer/bank, card)
       const paystackChannels = ['bank', 'card', 'bank_transfer'];
-      const amount = 100000; // Set your registration fee here
+      const amount = 10000; // Set your registration fee here
       const paystackService = require('../services/paystackService');
       const paymentData = await paystackService.initializePayment(
         newPlayer.lichessUsername,
