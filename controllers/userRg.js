@@ -6,17 +6,36 @@ const lichessService = require("../services/lichessService")
 const Transaction = require('../models/transaction')
 
 const Players = {
+  // async getTransactionStatus(req, res) {
+  //   try {
+  //     const { reference } = req.query;
+  //     if (!reference) {
+  //       return res.status(400).json({ status: 'error', message: 'Reference is required' });
+  //     }
+  //     const transaction = await Transaction.findOne({ reference });
+  //     if (!transaction) {
+  //       return res.status(404).json({ status: 'error', message: 'Transaction not found' });
+  //     }
+  //     return res.status(200).json({ status: transaction.status });
+  //   } catch (error) {
+  //     console.error('Error fetching transaction status:', error);
+  //     return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+  //   }
+  // },
   async getTransactionStatus(req, res) {
     try {
       const { reference } = req.query;
       if (!reference) {
         return res.status(400).json({ status: 'error', message: 'Reference is required' });
       }
-      const transaction = await Transaction.findOne({ reference });
-      if (!transaction) {
-        return res.status(404).json({ status: 'error', message: 'Transaction not found' });
+      // Use PaystackService.verifyPayment to get live status
+      const paystackService = require('../services/paystackService');
+      const paymentData = await paystackService.verifyPayment(reference);
+      if (!paymentData || !paymentData.status) {
+        return res.status(404).json({ status: 'error', message: 'Transaction not found or no status returned' });
       }
-      return res.status(200).json({ status: transaction.status });
+      console.log(`[Paystack Polling] Transaction status for reference ${reference}: ${paymentData}`);
+      return res.status(200).json({ status: paymentData.status });
     } catch (error) {
       console.error('Error fetching transaction status:', error);
       return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
