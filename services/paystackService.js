@@ -38,13 +38,7 @@ class PaystackService {
 
     return data
   }
-}
-
-// const axiosClient = require('./axiosClient'); // Adjust path if needed
-// const Transaction = require('../models/transaction');
-
-// Function to verify payment status from Paystack
-async function verifyPayment(reference) {
+static async verifyPayment(reference) {
   try {
     const { data: { data } } = await axiosClient.get(`/transaction/verify/${reference}`);
     return data;
@@ -53,6 +47,13 @@ async function verifyPayment(reference) {
     throw new Error('Failed to verify payment');
   }
 }
+}
+
+// const axiosClient = require('./axiosClient'); // Adjust path if needed
+// const Transaction = require('../models/transaction');
+
+// Function to verify payment status from Paystack
+
 
 // Periodically check and update pending transactions
 async function pollPendingTransactions() {
